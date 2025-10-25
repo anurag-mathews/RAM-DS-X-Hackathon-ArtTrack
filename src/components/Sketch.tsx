@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { eyeTracker } from "./eye_tracker";
 
 
-type Tool = "draw" | "fill" | "erase" | "reset";
+type Tool = "draw" | "fill" | "erase" | "reset" | "eyetrack";
 
 const Sketch: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -10,6 +10,46 @@ const Sketch: React.FC = () => {
     const [drawing, setDrawing] = useState(false);
     const [color, setColor] = useState<string>("#000000");
     const [thickness, setThickness] = useState<number>(20);
+    const [eyeTrackingOn, setEyeTrackingOn] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    const handleEyeTracking = () => {
+        setEyeTrackingOn(prev => {
+            const next = !prev;
+            const canvas = canvasRef.current;
+            if (!canvas) return prev;
+            if (next) {
+                let video = videoRef.current;
+                if (!video) {
+                    video = document.createElement("video");
+                    video.setAttribute("playsInline", "true");
+                    video.style.display = "none";
+                    document.body.appendChild(video);
+                    videoRef.current = video;
+                }
+                eyeTracker.start(
+                    video,
+                    canvas,
+                    (x, y) => {
+                        if (tool === "draw") {
+                            const ctx = canvas.getContext("2d");
+                            if (!ctx) return;
+                            ctx.strokeStyle = color;
+                            ctx.lineWidth = thickness;
+                            ctx.lineCap = "round";
+                            ctx.lineTo(x, y);
+                            ctx.stroke();
+                            ctx.beginPath();
+                            ctx.moveTo(x, y);
+                        }
+                    }
+                );
+            } else {
+                eyeTracker.stop();
+            }
+            return next;
+        });
+    };
 
     const handleMouseDown = (e: React.MouseEvent) => {
         setDrawing(true);
@@ -125,9 +165,7 @@ const Sketch: React.FC = () => {
         ctx.beginPath();
     };
 
-    const handleEyeTracking = () => {
-        console.log("Eye tracking on/off");
-    };
+    
 
     const handleSubmit = () => {
         const canvas = canvasRef.current;
