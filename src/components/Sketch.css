@@ -5,7 +5,9 @@
   --ring: #2563eb;
   --card: #ffffff;
   --border: #e5e7eb;
-  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+  --shadow:
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    0 10px 30px rgba(0, 0, 0, 0.08);
   --radius: 10px;
   --pad: 12px;
   --hdr: 60px;
@@ -137,15 +139,15 @@ html, body, #root {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   display: flex; align-items: center; justify-content: center;
+  border: 10px solid #000;
 }
 
-/* Center the shrink-wrapped canvas block inside the card */
 .canvas-card {
-  padding: 8px;                /* tighter horizontal padding */
+  padding: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;            /* prevents tiny overflow artifacts */
+  overflow: hidden;
 }
 
 .canvas-wrap {
@@ -155,15 +157,13 @@ html, body, #root {
   max-width: 100%;
   max-height: 100%;
   box-sizing: content-box;
-  /* was: border: 1px solid var(--border); */
   border: 0;
-  box-shadow: 0 0 0 1px var(--border) inset;  /* crisp 1px stroke on all sides */
+  box-shadow: 0 0 0 1px var(--border) inset;
   border-radius: var(--radius);
   background: #fff;
 }
 
 
-/* Keep the canvas unscaled; border on wrapper avoids 1px coord shift */
 .canvas {
   display: block;
   border: 0;
@@ -171,7 +171,6 @@ html, body, #root {
   background: #fff;
 }
 
-/* Pointer remains in the same coord space as the canvas */
 .pointer {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -181,7 +180,6 @@ html, body, #root {
   outline: none;
 }
 
-/* Breakpoints tighten spacing/sizing further on small devices */
 @media (max-width: 900px) {
   .g-toolbar { gap: 8px; }
   .g-row { gap: 6px; }

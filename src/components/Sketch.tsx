@@ -10,7 +10,6 @@ const Sketch: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [tool, setTool] = useState<Tool>("draw");
 
-  // Removed per-frame cursor state; use refs instead
   const pointerRef = useRef<HTMLDivElement>(null);
   const lastGazeRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -39,7 +38,6 @@ const Sketch: React.FC = () => {
   useEffect(() => { colorRef.current = color; }, [color]);
   useEffect(() => { thicknessRef.current = thickness; }, [thickness]);
 
-  // HiDPI canvas setup
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -64,7 +62,6 @@ const Sketch: React.FC = () => {
     if (eyeTrackingOn) eyeTracker.setOptions({ gain, smooth });
   }, [gain, smooth, eyeTrackingOn]);
 
-  // Ctrl/Cmd+Z
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")) {
@@ -395,7 +392,7 @@ const Sketch: React.FC = () => {
   return (
     <div className="g-root">
       <header className="g-header">
-        <h1 className="g-title">ArtTrack</h1>
+        <h1 className="g-title">SightBoard</h1>
       </header>
 
       <div className="g-toolbar card">
@@ -443,7 +440,7 @@ const Sketch: React.FC = () => {
           </label>
 
           <label className="control">
-            <span className="label">Smoothing</span>
+            <span className="label">Blending</span>
             <input className="range" type="range" min={0} max={0.95} step={0.05} value={smooth} onChange={(e) => setSmooth(Number(e.target.value))} />
             <span className="badge">{smooth.toFixed(2)}</span>
           </label>
