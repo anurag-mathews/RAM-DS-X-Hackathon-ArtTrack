@@ -392,7 +392,7 @@ const Sketch: React.FC = () => {
   return (
     <div className="g-root">
       <header className="g-header">
-        <h1 className="g-title">SightBoard</h1>
+        <h1 className="g-title">Sightboard</h1>
       </header>
 
       <div className="g-toolbar card">
