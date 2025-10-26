@@ -19,7 +19,7 @@ const Sketch: React.FC = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const dpr = Math.max(1, (window.devicePixelRatio || 1));
     const width = 960, height = 540;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
@@ -39,9 +39,8 @@ const Sketch: React.FC = () => {
   const handleEyeTracking = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const next = !eyeTrackingOn;
-    setEyeTrackingOn(next);
-    if (next) {
+
+    if (!eyeTrackingOn) {
       let video = videoRef.current;
       if (!video) {
         video = document.createElement("video");
@@ -74,12 +73,14 @@ const Sketch: React.FC = () => {
           },
           { gain, smooth, mirror: true }
         );
+        setEyeTrackingOn(true);
       } catch (e) {
         console.error(e);
         setEyeTrackingOn(false);
       }
     } else {
       eyeTracker.stop();
+      setEyeTrackingOn(false);
       setCursor(null);
     }
   };
@@ -227,12 +228,14 @@ const Sketch: React.FC = () => {
             <Btn active={tool === "draw"} onClick={() => handleToolChange("draw")} title="Draw">Draw</Btn>
             <Btn active={tool === "erase"} onClick={() => handleToolChange("erase")} title="Erase">Erase</Btn>
             <Btn active={tool === "fill"} onClick={() => handleToolChange("fill")} title="Fill">Fill</Btn>
-            <Btn onClick={handleReset} title="Clear">⟲ Clear</Btn>
+            <Btn onClick={handleReset} title="Clear">Clear</Btn>
           </div>
 
           <div className="g-segment">
-            <Btn active={eyeTrackingOn} onClick={handleEyeTracking} title="Eye Tracking">{eyeTrackingOn ? "n" : "Off"}</Btn>
-            <Btn variant="ghost" onClick={handleRecenter} title="Recenter">∘ Recenter</Btn>
+            <Btn active={eyeTrackingOn} onClick={handleEyeTracking} title="Toggle Eye Tracking">
+              {eyeTrackingOn ? "Eye Tracking: On" : "Eye Tracking: Off"}
+            </Btn>
+            <Btn variant="ghost" onClick={handleRecenter} title="Recenter">Recenter</Btn>
           </div>
         </div>
 
