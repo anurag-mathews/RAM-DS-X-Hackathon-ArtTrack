@@ -10,24 +10,21 @@ const Sketch: React.FC = () => {
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [drawing, setDrawing] = useState(false);
   const [color, setColor] = useState<string>("#000000");
-  const [thickness, setThickness] = useState<number>(20);
+  const [thickness, setThickness] = useState<number>(16);
   const [eyeTrackingOn, setEyeTrackingOn] = useState(false);
+  const [gain, setGain] = useState<number>(3);
+  const [smooth, setSmooth] = useState<number>(0.25);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // HiDPI canvas setup on mount
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = Math.max(1, window.devicePixelRatio || 1);
-
-    const width = 960;   // logical canvas width in CSS pixels
-    const height = 540;  // logical canvas height in CSS pixels
-
+    const width = 960, height = 540;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     canvas.width = Math.floor(width * dpr);
     canvas.height = Math.floor(height * dpr);
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -35,42 +32,59 @@ const Sketch: React.FC = () => {
     ctx.fillRect(0, 0, width, height);
   }, []);
 
-  const handleEyeTracking = () => {
-    setEyeTrackingOn(prev => {
-      const next = !prev;
-      const canvas = canvasRef.current;
-      if (!canvas) return prev;
+  useEffect(() => {
+    if (eyeTrackingOn) eyeTracker.setOptions({ gain, smooth });
+  }, [gain, smooth, eyeTrackingOn]);
 
-      if (next) {
-        let video = videoRef.current;
-        if (!video) {
-          video = document.createElement("video");
-          video.setAttribute("playsInline", "true");
-          video.style.display = "none";
-          document.body.appendChild(video);
-          videoRef.current = video;
-        }
-        eyeTracker.start(video, canvas, (x, y) => {
-          setCursor({ x, y });
-          if (tool === "draw") {
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return;
-            ctx.strokeStyle = color;
-            ctx.lineWidth = thickness;
-            ctx.lineCap = "round";
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-          }
-        });
-      } else {
-        eyeTracker.stop();
-        setCursor(null);
+  const handleEyeTracking = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const next = !eyeTrackingOn;
+    setEyeTrackingOn(next);
+    if (next) {
+      let video = videoRef.current;
+      if (!video) {
+        video = document.createElement("video");
+        video.setAttribute("playsInline", "true");
+        video.autoplay = true;
+        video.muted = true;
+        video.width = canvas.width;
+        video.height = canvas.height;
+        Object.assign(video.style, { position: "fixed", left: "-99999px", top: "0", opacity: "0", pointerEvents: "none" });
+        document.body.appendChild(video);
+        videoRef.current = video;
       }
-      return next;
-    });
+      try {
+        await eyeTracker.start(
+          video!,
+          canvas,
+          (x, y) => {
+            setCursor({ x, y });
+            if (tool === "draw") {
+              const ctx = canvas.getContext("2d");
+              if (!ctx) return;
+              ctx.strokeStyle = color;
+              ctx.lineWidth = thickness;
+              ctx.lineCap = "round";
+              ctx.lineTo(x, y);
+              ctx.stroke();
+              ctx.beginPath();
+              ctx.moveTo(x, y);
+            }
+          },
+          { gain, smooth, mirror: true }
+        );
+      } catch (e) {
+        console.error(e);
+        setEyeTrackingOn(false);
+      }
+    } else {
+      eyeTracker.stop();
+      setCursor(null);
+    }
   };
+
+  const handleRecenter = () => eyeTracker.calibrate();
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setDrawing(true);
@@ -78,19 +92,13 @@ const Sketch: React.FC = () => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
     ctx.beginPath();
     ctx.moveTo(x, y);
-    
-    if (tool === "draw") {
-      draw(e);
-    } else if (tool === "fill") {
-      handleFill(e);
-    }
+    if (tool === "draw") draw(e);
+    else if (tool === "fill") handleFill(e);
   };
 
   const handleMouseUp = () => setDrawing(false);
@@ -108,7 +116,6 @@ const Sketch: React.FC = () => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-
     if (tool === "draw") {
       ctx.strokeStyle = color;
       ctx.lineWidth = thickness;
@@ -116,7 +123,6 @@ const Sketch: React.FC = () => {
       ctx.lineTo(x, y);
       ctx.stroke();
       ctx.beginPath();
-
       ctx.moveTo(x, y);
     } else if (tool === "erase") {
       ctx.clearRect(x - thickness, y - thickness, thickness * 2, thickness * 2);
@@ -131,23 +137,13 @@ const Sketch: React.FC = () => {
     const rect = canvas.getBoundingClientRect();
     const x = Math.floor(e.clientX - rect.left);
     const y = Math.floor(e.clientY - rect.top);
-
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
-
-    const hexToRgba = (hex: string) => {
-      const h = hex.replace("#", "");
-      const r = parseInt(h.substring(0, 2), 16);
-      const g = parseInt(h.substring(2, 4), 16);
-      const b = parseInt(h.substring(4, 6), 16);
-      return [r, g, b, 255];
-    };
-    const fillColor = hexToRgba(color);
-
+    const h = color.replace("#", "");
+    const fillColor = [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16), 255];
     const pixelPos = (y * canvas.width + x) * 4;
     const targetColor = data.slice(pixelPos, pixelPos + 4);
     if (targetColor.every((v, i) => v === fillColor[i])) return;
-
     const stack: [number, number][] = [[x, y]];
     while (stack.length) {
       const [cx, cy] = stack.pop()!;
@@ -226,38 +222,42 @@ const Sketch: React.FC = () => {
       </header>
 
       <div className="g-toolbar card">
-        <div className="g-tools">
-          <Btn active={tool === "draw"} onClick={() => handleToolChange("draw")} title="Draw">Draw</Btn>
-          <Btn active={tool === "fill"} onClick={() => handleToolChange("fill")} title="Fill">Fill</Btn>
-          <Btn active={tool === "erase"} onClick={() => handleToolChange("erase")} title="Erase">Erase</Btn>
-          <Btn onClick={handleReset} title="Clear">Clear</Btn>
-          <Btn active={eyeTrackingOn} onClick={handleEyeTracking} title="Eye Tracking">EyeTrack</Btn>
+        <div className="g-row">
+          <div className="g-segment">
+            <Btn active={tool === "draw"} onClick={() => handleToolChange("draw")} title="Draw">Draw</Btn>
+            <Btn active={tool === "erase"} onClick={() => handleToolChange("erase")} title="Erase">Erase</Btn>
+            <Btn active={tool === "fill"} onClick={() => handleToolChange("fill")} title="Fill">Fill</Btn>
+            <Btn onClick={handleReset} title="Clear">⟲ Clear</Btn>
+          </div>
+
+          <div className="g-segment">
+            <Btn active={eyeTrackingOn} onClick={handleEyeTracking} title="Eye Tracking">{eyeTrackingOn ? "n" : "Off"}</Btn>
+            <Btn variant="ghost" onClick={handleRecenter} title="Recenter">∘ Recenter</Btn>
+          </div>
         </div>
 
-        <div className="g-controls">
+        <div className="g-row">
           <label className="control">
             <span className="label">Color</span>
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="color"
-              aria-label="Ink color"
-            />
+            <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="color" />
           </label>
 
           <label className="control">
             <span className="label">Size</span>
-            <input
-              type="range"
-              min={1}
-              max={80}
-              value={thickness}
-              onChange={(e) => setThickness(Number(e.target.value))}
-              className="range"
-              aria-label="Brush size"
-            />
-            <span className="value">{thickness}</span>
+            <input className="range" type="range" min={1} max={80} value={thickness} onChange={(e) => setThickness(Number(e.target.value))} />
+            <span className="badge">{thickness}</span>
+          </label>
+
+          <label className="control">
+            <span className="label">Sensitivity</span>
+            <input className="range" type="range" min={1} max={8} step={0.1} value={gain} onChange={(e) => setGain(Number(e.target.value))} />
+            <span className="badge">{gain.toFixed(1)}×</span>
+          </label>
+
+          <label className="control">
+            <span className="label">Smoothing</span>
+            <input className="range" type="range" min={0} max={0.95} step={0.05} value={smooth} onChange={(e) => setSmooth(Number(e.target.value))} />
+            <span className="badge">{smooth.toFixed(2)}</span>
           </label>
 
           <Btn variant="primary" onClick={handleSubmit} title="Export PNG">Export</Btn>
@@ -276,11 +276,7 @@ const Sketch: React.FC = () => {
               onMouseMove={handleMouseMove}
             />
             {eyeTrackingOn && cursor && (
-              <div
-                className="pointer"
-                style={{ left: cursor.x - 5, top: cursor.y - 5 }}
-                aria-hidden="true"
-              />
+              <div className="pointer" style={{ left: cursor.x - 5, top: cursor.y - 5 }} aria-hidden="true" />
             )}
           </div>
         </div>
