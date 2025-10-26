@@ -12,14 +12,23 @@ const Sketch: React.FC = () => {
   const [color, setColor] = useState<string>("#000000");
   const [thickness, setThickness] = useState<number>(16);
   const [eyeTrackingOn, setEyeTrackingOn] = useState(false);
+  const [gazeDrawing, setGazeDrawing] = useState(false);
   const [gain, setGain] = useState<number>(3);
   const [smooth, setSmooth] = useState<number>(0.25);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const gazeActiveRef = useRef(false);
+  const colorRef = useRef(color);
+  const thicknessRef = useRef(thickness);
+
+  useEffect(() => { gazeActiveRef.current = gazeDrawing; }, [gazeDrawing]);
+  useEffect(() => { colorRef.current = color; }, [color]);
+  useEffect(() => { thicknessRef.current = thickness; }, [thickness]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = Math.max(1, (window.devicePixelRatio || 1));
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
     const width = 960, height = 540;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
@@ -59,17 +68,16 @@ const Sketch: React.FC = () => {
           canvas,
           (x, y) => {
             setCursor({ x, y });
-            if (tool === "draw") {
-              const ctx = canvas.getContext("2d");
-              if (!ctx) return;
-              ctx.strokeStyle = color;
-              ctx.lineWidth = thickness;
-              ctx.lineCap = "round";
-              ctx.lineTo(x, y);
-              ctx.stroke();
-              ctx.beginPath();
-              ctx.moveTo(x, y);
-            }
+            if (!gazeActiveRef.current) return;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+            ctx.strokeStyle = colorRef.current;
+            ctx.lineWidth = thicknessRef.current;
+            ctx.lineCap = "round";
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
           },
           { gain, smooth, mirror: true }
         );
@@ -77,15 +85,27 @@ const Sketch: React.FC = () => {
       } catch (e) {
         console.error(e);
         setEyeTrackingOn(false);
+        setGazeDrawing(false);
       }
     } else {
       eyeTracker.stop();
       setEyeTrackingOn(false);
+      setGazeDrawing(false);
       setCursor(null);
     }
   };
 
-  const handleRecenter = () => eyeTracker.calibrate();
+  const handleGazeStartStop = (next: boolean) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setGazeDrawing(next);
+    if (next) {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.beginPath();
+      if (cursor) ctx.moveTo(cursor.x, cursor.y);
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setDrawing(true);
@@ -204,13 +224,15 @@ const Sketch: React.FC = () => {
     children: React.ReactNode;
     title?: string;
     variant?: "primary" | "ghost";
-  }> = ({ active, onClick, children, title, variant }) => (
+    disabled?: boolean;
+  }> = ({ active, onClick, children, title, variant, disabled }) => (
     <button
       type="button"
       className={`btn ${variant || ""} ${active ? "active" : ""}`}
       onClick={onClick}
       title={title}
       aria-pressed={active}
+      disabled={disabled}
     >
       {children}
     </button>
@@ -235,7 +257,18 @@ const Sketch: React.FC = () => {
             <Btn active={eyeTrackingOn} onClick={handleEyeTracking} title="Toggle Eye Tracking">
               {eyeTrackingOn ? "Eye Tracking: On" : "Eye Tracking: Off"}
             </Btn>
-            <Btn variant="ghost" onClick={handleRecenter} title="Recenter">Recenter</Btn>
+            {eyeTrackingOn && (
+              <Btn
+                active={gazeDrawing}
+                onClick={() => handleGazeStartStop(!gazeDrawing)}
+                title={gazeDrawing ? "Stop gaze drawing" : "Start gaze drawing"}
+              >
+                {gazeDrawing ? "Stop" : "Start"}
+              </Btn>
+            )}
+            <Btn variant="ghost" onClick={() => eyeTracker.calibrate()} title="Recenter" disabled={!eyeTrackingOn}>
+              Recenter
+            </Btn>
           </div>
         </div>
 
@@ -279,7 +312,23 @@ const Sketch: React.FC = () => {
               onMouseMove={handleMouseMove}
             />
             {eyeTrackingOn && cursor && (
-              <div className="pointer" style={{ left: cursor.x - 5, top: cursor.y - 5 }} aria-hidden="true" />
+              <div
+                className="pointer"
+                style={{
+                  position: "absolute",
+                  left: cursor.x,
+                  top: cursor.y,
+                  width: `${thickness}px`,
+                  height: `${thickness}px`,
+                  transform: "translate(-50%, -50%)",
+                  borderRadius: "50%",
+                  backgroundColor: color,   // solid fill = brush color
+                  border: "none",
+                  boxShadow: "none",
+                  pointerEvents: "none"
+                }}
+                aria-hidden="true"
+              />
             )}
           </div>
         </div>

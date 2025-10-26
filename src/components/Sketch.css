@@ -57,6 +57,12 @@ html, body, #root { height: 100%; background: var(--bg); color: var(--text); fon
   .g-segment { width: 100%; justify-content: space-between; }
 }
 
+.pointer {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent;
+}
 
 :root { color-scheme: light; }
 html, body, #root {
