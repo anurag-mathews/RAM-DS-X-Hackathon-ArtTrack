@@ -1,48 +1,113 @@
-# Art track for Sight
-Frame
-Blend
-Shadow
+# SightBoard
 
-## Idea
-Goal: user draws a doodle of an object or scene, and the app turns it into a basic 3D model or low poly scene they can view/download.
+SightBoard is an experimental web-based sketchpad that lets you **draw using your eyes**.  
+It combines traditional drawing tools with **head and gaze tracking**, giving users an intuitive, hands-free way to sketch directly onto a digital canvas.
 
-Output meshes should not be super detailed, maybe a few hundred thousand triangles max? Aim for processing time of <30 seconds.
+You can try it at:  
+**[https://sightboard.vercel.app](https://sightboard.vercel.app)**
 
-So basic walkthrough of using the app:
-1 User draws something on a blank canvas
-2 User presses generate and waits for 3D preview to appear
-3 User can see and rotate the 3D model and download the file (format might be .glb, .fbx, or .obj)
+---
 
-So the canvas has to be able to export a png for the ML model. Possible options to look into: 
-p5.js (easy to implement drawing stuff with mouse/trackpad)
-Konva.js
-Paper.js
+## Overview
 
-Zero-1-to-3 can generate multiple views from a single sketch, would help later so the 3D model has depth.
-(Alternative: Stability.ai, has subscription)
+SightBoard allows you to create digital drawings using either a **mouse** or **eye-tracking** input through your webcam.  
+It’s designed to feel minimal and familiar, like a simple sketchpad, while integrating experimental input control for accessibility and creative exploration.
 
-For the 3D viewer, we can use three.js (ie react-three-fiber), through which we'll load and rotate around the model (ie .glb file). We might have a grid and axes, etc (later implementation). a small FastAPI service. 
-Example Endpoints:
-POST /jobs -> upload doodle, includes PNG file
-GET /jobs/{id} -> check job status
-GET /assets/{id} -> download generated model
+The interface is clean, responsive, and built for both desktop and mobile screens.
 
-We'll keep the generated a local folder and automatically delete them after some time has passed, so no DB is needed.
+---
 
-## Sketch -> 3D pipeline
-First we'll have to standardize the image to a fixed resolution, convert to grayscale for the geometry model, and then use the colored image to pass the information for baking the texture.
-Maybe it will also reduce noise and close gaps between lines.
+## Features
 
-To convert 2d to 3d we can try some models:
-TripoSR, InstantMesh: can make quick meshes from 2d
-Check pricing of models if not free
+### **Drawing Tools**
+- **Draw:** Freely sketch with adjustable color and brush thickness.  
+- **Erase:** Remove parts of your drawing with a configurable eraser size.  
+- **Fill:** Click to fill enclosed regions with a solid color.  
+  - Automatically detects target regions and prevents unwanted full-canvas fills.
+- **Clear:** Resets the entire canvas to white.
 
-Optimizing the mesh? May include smoothing, reducing vertices, generating UV maps, baking simple texture based on original sketch.
+---
 
-Let's focus on black and white drawings before adding different colors, as colors entails baking the drawing texture onto the mesh.
+### **Eye Tracking Mode**
+SightBoard integrates gaze tracking through your webcam:
+- Toggle **Head Tracking** to activate the tracker.
+- When active, a **cursor** follows your gaze in real-time.
+- Click **Start** to begin gaze-controlled drawing.
+- Click **Stop** to pause drawing without turning off tracking.
+- Adjust **Sensitivity (Gain)** to fine-tune how much your head movement affects cursor motion.
+- Adjust **Smoothing** to stabilize cursor movement and reduce jitter.
 
-## Zero123++
+All controls remain active while tracking is on.
 
+---
 
+### **Manual Drawing Enhancements**
+- **Shift + Click Line Tool:** Hold **Shift** while clicking a new point to draw a perfectly straight line from your previous point — similar to GIMP or Photoshop behavior.
+- **Undo (Ctrl + Z):** Step back through your drawing history at any time.
+- **Redo (Ctrl + Y):** Redo an undone action.
 
+---
 
+### **Export**
+- **Export PNG:** Instantly download your current drawing as a `.png` image with one click.
+- File is generated locally in-browser — no data is uploaded or stored.
+
+---
+
+## Interface Overview
+
+### **Top Toolbar**
+Contains:
+- Drawing mode selection (Draw, Erase, Fill, Clear)
+- Head Tracking controls (On/Off + Start/Stop)
+- Color, Size, Sensitivity, and Smoothing sliders
+- Export button
+
+Each button highlights when active. The toolbar remains fixed and responsive across devices.
+
+---
+
+### **Canvas**
+- High-resolution 960×540 drawing surface.
+- Auto-scaled for device pixel ratio for crisp rendering.
+- Surrounded by a clean white workspace with a subtle black frame.
+
+---
+
+## Accessibility
+
+SightBoard’s gaze control provides a creative and accessible drawing experience for:
+- Users with limited hand mobility.
+- Artists and designers exploring new forms of interaction.
+- Educators or researchers studying human–computer interaction through vision.
+
+All processing is done locally — **no webcam data leaves your device**.
+
+---
+
+## Technology
+
+- **React (TypeScript + Vite)**
+- **Web-based Eye Tracking** via lightweight in-browser tracking module
+- **HTML5 Canvas API** for drawing and pixel-level manipulation
+- **Responsive CSS** with adaptive scaling for mobile and desktop
+
+---
+
+## Future Improvements
+Planned or considered enhancements:
+- Multi-layer drawing and opacity controls  
+- Smarter fill tolerance detection  
+- Custom brush shapes and textures  
+- Improved calibration and tracking feedback  
+
+---
+
+## Credits
+Developed as a lightweight experimental art tool blending **vision**, **motion**, and **expression**.  
+Built with care, simplicity, and a focus on creative accessibility.
+
+---
+
+### **Try it now**
+**[https://sightboard.vercel.app](https://sightboard.vercel.app)**
