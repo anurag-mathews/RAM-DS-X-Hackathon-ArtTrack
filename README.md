@@ -27,7 +27,7 @@ A minimalist canvas with familiar tools (draw, erase, fill, clear) plus an exper
 
 Turn on tracking to control a visible cursor with gentle motion and choose when to **Start** or **Stop** drawing. You can tune **Sensitivity** and **Line Blending** however feels most comfortable.
 
-> Motion processing runs in your browser; video is not recorded or stored.
+> Motion processing runs in your browser; no video is recorded or stored.
 
 ---
 
